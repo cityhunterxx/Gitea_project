@@ -1,0 +1,43 @@
+version: "3"
+
+services:
+  gitea:
+    image: gitea/gitea:1.18.5
+    container_name: gitea_ct
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    restart: unless-stopped
+    networks:
+      - proxy_nt
+    volumes:
+      - gitea_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "3000:3000"
+#      - "222:22" We won't be doing git ssh, our server does it already
+############################################
+############################################
+# Nexus Router 
+    labels:
+      # enable traefik
+      - "traefik.enable=true"
+      # router
+      - "traefik.http.routers.${ROUTEUR_NAME}.rule=Host(`${DOMAIN_NAME}`)"
+      - "traefik.http.routers.${ROUTEUR_NAME}.entrypoints=websecure"
+      - "traefik.http.routers.${ROUTEUR_NAME}.service=${SERVICE_NAME}"
+      # certificate SSL HTTPS
+      - traefik.http.routers.${ROUTEUR_NAME}.tls=true
+      - traefik.http.routers.${ROUTEUR_NAME}.tls.certresolver=lets-encrypt
+      # service
+      - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.port=${CONTAINER_PORT}
+      - traefik.http.services.${SERVICE_NAME}.loadbalancer.server.scheme=http
+networks:
+  proxy_nt:
+    external: true
+volumes:
+  gitea_data:
+    name: gitea_data
+    driver: local
+    external: false
